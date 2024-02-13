@@ -10,7 +10,6 @@ require("dotenv").config();
 const jwt = require('jsonwebtoken');
 
 r.post("/create/prod",upload.array("file"),async(req,res)=>{
- 
  const token = req.headers.authorization;
  jwt.verify(token,process.env.secret_key_jsw ,async (err, decodedToken) => {
   
@@ -18,14 +17,9 @@ r.post("/create/prod",upload.array("file"),async(req,res)=>{
       return res.status(401).json({ error: 'Invalid token' });
     } else {
         const uploadPromises = req.files.map(element => cloud.uploadFile(element.path));
-
     try {
-       
         const uploadedFiles = await Promise.all(uploadPromises);
-    
-   
         const secureUrls = uploadedFiles.map(file => file.secure_url);
-    
         const prod = new prodModel({
             prodName: req.body.prodName,
             prodDesc: req.body.prodDesc,
@@ -47,15 +41,11 @@ r.post("/create/prod",upload.array("file"),async(req,res)=>{
   }else{
     return res.send("some server side errors")
   }
-
     }catch(error) {
         return res.send(error) ;
     }
     }
   });
-
-
-   
 })
 
 r.get("/get/prods",(req,res)=>{
@@ -75,9 +65,33 @@ r.get("/get/prods",(req,res)=>{
 })
 
 r.get("/get/prods/:id",async(req,res)=>{
-    await prodModel.findById({_id:req.params.id},{ projection: { 'category.products': 0 }}).populate({path:'category',select:{ 'products': 0 }}).then(prods=>{
-        res.send(prods)
-    }).catch((e)=>{res.send('server side err '+e)})
+    const token = req.headers.authorization;
+    
+    jwt.verify(token,process.env.secret_key_jsw ,async (err, decodedToken) => {
+        if (err) {
+          return res.status(401).json({ error: 'Invalid token' });
+        } else {
+            await prodModel.findById({_id:req.params.id},{ projection: { 'category.products': 0 }}).populate({path:'category',select:{ 'products': 0 }}).then(prods=>{
+                res.send(prods)
+            }).catch((e)=>{res.send('server side err '+e)})         
+        }
+      });
+   
+})
+
+r.delete("/delete/prod/:id",async(req,res)=>{
+    const token = req.headers.authorization;
+    jwt.verify(token,process.env.secret_key_jsw,async(err,decodedToken)=>{
+        if (err) {
+            return res.status(401).json({ error: 'Invalid token' });
+        }else{
+            const prod=await prodModel.findOneAndDelete(req.params.id)
+            const user = await userModel.findByIdAndUpdate(decodedToken.userId, { $pull: { products: req.params.id } }, { new: true });
+            const cate = await category.findByIdAndUpdate(decodedToken.userId, { $pull: { products: req.params.id } }, { new: true });//hadi mazalet 
+          return res.send("deleted success")
+        }
+
+    })
 })
 
 module.exports=r
