@@ -1,6 +1,7 @@
 const express=require("express")
 const r=express()
 const prodModel=require("../models/product.model")
+const userModel=require("../models/user.model")
 const multer=require("multer")
 const cloud=require("../cloudinary.cloud")
 const upload = multer({ dest: 'uploads/' })
@@ -9,10 +10,14 @@ require("dotenv").config();
 const jwt = require('jsonwebtoken');
 
 r.post("/create/prod",upload.array("file"),async(req,res)=>{
- const cat = await category.findById(req.body.category);
-
-
-    const uploadPromises = req.files.map(element => cloud.uploadFile(element.path));
+ 
+ const token = req.headers.authorization;
+ jwt.verify(token,process.env.secret_key_jsw ,async (err, decodedToken) => {
+  
+    if (err) {
+      return res.status(401).json({ error: 'Invalid token' });
+    } else {
+        const uploadPromises = req.files.map(element => cloud.uploadFile(element.path));
 
     try {
        
@@ -26,24 +31,36 @@ r.post("/create/prod",upload.array("file"),async(req,res)=>{
             prodDesc: req.body.prodDesc,
             prodPrice: req.body.prodPrice,
             prodImages: secureUrls,
-            category:req.body.category
+            category:req.body.category,
         });
+        console.log(prod.prodDesc);
   const savedProduct = await prod.save();
-  cat.products.push(savedProduct._id);
+  if (savedProduct) {
+   const user=await userModel.findById(decodedToken.userId);
+   console.log(user)
+  await user.products.push(savedProduct._id)
+  await  user.save();
+  const cat = await category.findById(req.body.category);
+  await cat.products.push(savedProduct._id);
   await cat.save();
-  res.send(savedProduct);
-    
-    
-    }catch(error) {
-       
-        res.send(error);
-    }
+  return res.send(savedProduct);
+  }else{
+    return res.send("some server side errors")
+  }
 
+    }catch(error) {
+        return res.send(error) ;
+    }
+    }
+  });
+
+
+   
 })
 
 r.get("/get/prods",(req,res)=>{
     const token = req.headers.authorization;
-    console.log(token)
+    
     jwt.verify(token,process.env.secret_key_jsw ,async (err, decodedToken) => {
         if (err) {
           return res.status(401).json({ error: 'Invalid token' });

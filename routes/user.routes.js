@@ -25,7 +25,7 @@ r.post("/signup",async(req,res)=>{
         await user.save().then(data=>{
             res.json({msg:"user saved",token:createToken(user._id,req.body.userName)})
         }).catch(e=>{
-            res.send({msg:"server side err",error:e})
+         return   res.send({msg:"server side err",error:e})
         })
     } catch (error) {
         res.json({msg:error})
@@ -36,9 +36,9 @@ r.post("/login",async(req,res)=>{
   const userPassword=req.body.userPassword
   
   try {
-    const user=await userModel.login(userName,userPassword)
+  const user=await userModel.login(userName,userPassword)
  const token=  createToken(user._id,userName)
-    res.json({token:token,userData:user})
+  return  res.json({token:token,userData:user})
   } catch (error) {
     res.send(error)
   }

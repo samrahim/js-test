@@ -7,6 +7,7 @@ const prodSchema=mongo.Schema({
     prodPrice:Number,
     prodImages:[String],
     category: { type: Schema.Types.ObjectId, ref: 'Category' },
+    userRef:{ type: Schema.Types.ObjectId, ref: 'User' }
 },{
     timestamps:true
 })
