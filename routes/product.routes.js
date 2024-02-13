@@ -5,6 +5,9 @@ const multer=require("multer")
 const cloud=require("../cloudinary.cloud")
 const upload = multer({ dest: 'uploads/' })
 const category=require("../models/category.model")
+require("dotenv").config();
+const jwt = require('jsonwebtoken');
+
 r.post("/create/prod",upload.array("file"),async(req,res)=>{
  const cat = await category.findById(req.body.category);
 
@@ -38,11 +41,20 @@ r.post("/create/prod",upload.array("file"),async(req,res)=>{
 
 })
 
-r.get("/get/prods",async(req,res)=>{
-    await prodModel.find().populate({path:'category',select:{ 'products': 0 }}).then(prods=>{
-        res.send(prods)
-    }).catch((e)=>{res.send('server side err '+e)})
-    
+r.get("/get/prods",(req,res)=>{
+    const token = req.headers.authorization;
+    console.log(token)
+    jwt.verify(token,process.env.secret_key_jsw ,async (err, decodedToken) => {
+        if (err) {
+          return res.status(401).json({ error: 'Invalid token' });
+        } else {
+            await prodModel.find().populate({path:'category',select:{ 'products': 0 }}).then(prods=>{
+              return  res.send(prods)
+            }).catch((e)=>{
+               return res.send('server side err '+e)})
+         
+        }
+      });
 })
 
 r.get("/get/prods/:id",async(req,res)=>{
