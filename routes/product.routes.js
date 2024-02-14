@@ -8,14 +8,13 @@ const upload = multer({ dest: 'uploads/' })
 const category=require("../models/category.model")
 require("dotenv").config();
 const jwt = require('jsonwebtoken');
+const userroute=require("./user.routes")
 
-r.post("/create/prod",upload.array("file"),async(req,res)=>{
- const token = req.headers.authorization;
- jwt.verify(token,process.env.secret_key_jsw ,async (err, decodedToken) => {
-  
-    if (err) {
-      return res.status(401).json({ error: 'Invalid token' });
-    } else {
+
+
+r.post("/create/prod",userroute.isAuthenticated,upload.array("file"),async(req,res)=>{
+const token = req.headers.authorization;
+const decodedToken=jwt.decode(token)
         const uploadPromises = req.files.map(element => cloud.uploadFile(element.path));
     try {
         const uploadedFiles = await Promise.all(uploadPromises);
@@ -44,54 +43,33 @@ r.post("/create/prod",upload.array("file"),async(req,res)=>{
     }catch(error) {
         return res.send(error) ;
     }
-    }
-  });
+    
 })
 
-r.get("/get/prods",(req,res)=>{
-    const token = req.headers.authorization;
-    
-    jwt.verify(token,process.env.secret_key_jsw ,async (err, decodedToken) => {
-        if (err) {
-          return res.status(401).json({ error: 'Invalid token' });
-        } else {
-            await prodModel.find().populate({path:'category',select:{ 'products': 0 }}).then(prods=>{
-              return  res.send(prods)
-            }).catch((e)=>{
-               return res.send('server side err '+e)})
-         
-        }
-      });
+r.get("/get/prods",userroute.isAuthenticated,async(req,res)=>{
+await prodModel.find().populate({path:'category',select:{ 'products': 0 }}).then(prods=>{
+  return  res.send(prods)
+}).catch((e)=>{
+   return res.send('server side err '+e)})           
 })
 
-r.get("/get/prods/:id",async(req,res)=>{
-    const token = req.headers.authorization;
-    
-    jwt.verify(token,process.env.secret_key_jsw ,async (err, decodedToken) => {
-        if (err) {
-          return res.status(401).json({ error: 'Invalid token' });
-        } else {
-            await prodModel.findById({_id:req.params.id},{ projection: { 'category.products': 0 }}).populate({path:'category',select:{ 'products': 0 }}).then(prods=>{
+r.get("/get/prods/:id",userroute.isAuthenticated,async(req,res)=>{
+          await prodModel.findById({_id:req.params.id},{ projection: { 'category.products': 0 }}).populate({path:'category',select:{ 'products': 0 }}).then(prods=>{
                 res.send(prods)
             }).catch((e)=>{res.send('server side err '+e)})         
-        }
-      });
-   
 })
 
-r.delete("/delete/prod/:id",async(req,res)=>{
+r.delete("/delete/prod/:id",userroute.isAuthenticated,async(req,res)=>{
     const token = req.headers.authorization;
-    jwt.verify(token,process.env.secret_key_jsw,async(err,decodedToken)=>{
-        if (err) {
-            return res.status(401).json({ error: 'Invalid token' });
-        }else{
+  const decodedToken=  jwt.decode(token)
             const prod=await prodModel.findOneAndDelete(req.params.id)
             const user = await userModel.findByIdAndUpdate(decodedToken.userId, { $pull: { products: req.params.id } }, { new: true });
-            const cate = await category.findByIdAndUpdate(decodedToken.userId, { $pull: { products: req.params.id } }, { new: true });//hadi mazalet 
-          return res.send("deleted success")
-        }
+            const cate = await category.findByIdAndUpdate(prod.category, { $pull: { products: req.params.id } }, { new: true });
+          return res.json({msg:"item deleted success"})
 
-    })
 })
+
+
+
 
 module.exports=r

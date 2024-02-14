@@ -45,12 +45,20 @@ r.post("/login",async(req,res)=>{
 })
 
 
+function isAuthenticated(req,res,next) {
+    const token = req.headers.authorization;
+    jwt.verify(token,process.env.secret_key_jsw,async(err,decodedToken)=>{
+        if (err) {
+            return res.status(201).json({ msg: 'Invalid token' });
+        }else{
+            return next()
+        }
+    })
+}
 
 
-module.exports=r
+module.exports={r,isAuthenticated}
 
 
 
-
-// module.exports=r
 

@@ -2,6 +2,7 @@ const express=require("express")
 const app=express();
 app.use(express.json())
 app.use(express.urlencoded({extended:true}))
+const t=require("./tes")
 const mongo=require("mongoose")
 require("dotenv").config();
 const userroutes=require("./routes/user.routes")
@@ -9,9 +10,11 @@ mongo.connect(`mongodb+srv://${process.env.mongo_userName}:${process.env.mongo_p
 
 const prodRoutes=require("./routes/product.routes")
 const categoryRoutes=require("./routes/category.routes")
-app.use("/api",userroutes)
+app.use("/api",userroutes.r)
 app.use("/api",prodRoutes)
 app.use("/api",categoryRoutes)
+
+// app.use("/api",t)
 
 app.listen(8000,()=>{console.log("server starting ! ")})
 
