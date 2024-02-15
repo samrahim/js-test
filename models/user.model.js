@@ -3,8 +3,8 @@ const Schema = mongo.Schema;
 const bcrybt=require("bcrypt")
 
 const userSchema=mongo.Schema({
-    userName:String,
-    userPhoneNumber:String,
+    userName:{type:String,unique:true},
+    userPhoneNumber:{type:String,unique:true},
     userPassword:String,
     cardList:[{ type: Schema.Types.ObjectId, ref: 'Product' }],
     products: [{ type: Schema.Types.ObjectId, ref: 'Product' }]
@@ -15,12 +15,13 @@ userSchema.pre("save",async function (next) {
 })
 
 userSchema.statics.login=async function(userName,userPassword){
-    console.log(userName)
-    console.log("stary")
+console.log(userName)
+console.log("stary")
 const user=await this.findOne({userName});
 console.log(user)
 if(user){
 const result=await bcrybt.compare(userPassword,user.userPassword)
+console.log(result)
 if (result) {
     return user;
 }

@@ -25,6 +25,7 @@ const decodedToken=jwt.decode(token)
             prodPrice: req.body.prodPrice,
             prodImages: secureUrls,
             category:req.body.category,
+            userRef:decodedToken.userId,
         });
         console.log(prod.prodDesc);
   const savedProduct = await prod.save();
@@ -62,14 +63,33 @@ r.get("/get/prods/:id",userroute.isAuthenticated,async(req,res)=>{
 r.delete("/delete/prod/:id",userroute.isAuthenticated,async(req,res)=>{
     const token = req.headers.authorization;
   const decodedToken=  jwt.decode(token)
-            const prod=await prodModel.findOneAndDelete(req.params.id)
+  const prodUserId =prodModel.findOne(req.params.id).populate({path:"userref"})
+  if (prodUserId.userref._id==decodedToken.userId) {
+    const prod=await prodModel.findOneAndDelete(req.params.id)
             const user = await userModel.findByIdAndUpdate(decodedToken.userId, { $pull: { products: req.params.id } }, { new: true });
             const cate = await category.findByIdAndUpdate(prod.category, { $pull: { products: req.params.id } }, { new: true });
-          return res.json({msg:"item deleted success"})
-
+            return res.json({msg:"item deleted success"})
+          }else{
+return res.send("cant delete it")
+  }
 })
 
+r.post("/addProdToCart/:id",userroute.isAuthenticated,async(req,res)=>{
+  const token = req.headers.authorization;
+  const decodedToken=  jwt.decode(token)
+const user=await userModel.findById(decodedToken.userId)
+ await user.cardList.push(req.params.id)
+await user.save().then(s=>{return res.send("added to cart")}).catch(e=>{return res.send("we have err in cart "+ e)})
+})
 
+r.delete("/deleteprodfromCart/:id",userroute.isAuthenticated,async(req,res)=>{
+  const token = req.headers.authorization;
+  const decodedToken=  jwt.decode(token)
+  const user = await userModel.findByIdAndUpdate(decodedToken.userId, { $pull: { cardList: req.params.id } }, { new: true });
+ await user.save().then(s=>{res.json(
+  {"newcard":user.cardList}
+ )})
+})
 
 
 module.exports=r

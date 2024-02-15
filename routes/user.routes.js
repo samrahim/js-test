@@ -38,10 +38,22 @@ r.post("/login",async(req,res)=>{
   try {
   const user=await userModel.login(userName,userPassword)
  const token=  createToken(user._id,userName)
-  return  res.json({token:token,userData:user})
+    res.json({msg:"succees",token:token,userData:user})
   } catch (error) {
-    res.send(error)
+    res.json({msg:"please verify you info ?"})
   }
+})
+
+
+r.get("/getMyInfo",isAuthenticated,async(req,res)=>{
+    const token = req.headers.authorization;
+    const id=token.userId
+    const user=await userModel.findOne(id)
+    if (user) {
+       return  res.send(user)
+    }else{
+       return res.send("undefind user")
+    }
 })
 
 
@@ -55,6 +67,8 @@ function isAuthenticated(req,res,next) {
         }
     })
 }
+
+
 
 
 module.exports={r,isAuthenticated}
