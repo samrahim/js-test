@@ -48,14 +48,14 @@ const decodedToken=jwt.decode(token)
 })
 
 r.get("/get/prods",userroute.isAuthenticated,async(req,res)=>{
-await prodModel.find().populate({path:'category',select:{ 'products': 0 }}).then(prods=>{
+await prodModel.find().populate({path:'category',select:{ 'products': 0 }}).populate({path:"userRef",select:{'userPassword':0,"cardList":0}}).then(prods=>{
   return  res.send(prods)
 }).catch((e)=>{
    return res.send('server side err '+e)})           
 })
 
 r.get("/get/prods/:id",userroute.isAuthenticated,async(req,res)=>{
-          await prodModel.findById({_id:req.params.id},{ projection: { 'category.products': 0 }}).populate({path:'category',select:{ 'products': 0 }}).then(prods=>{
+          await prodModel.findById({_id:req.params.id},{ projection: { 'category.products': 0 }}).populate({path:'category',select:{ 'products': 0 }}).populate({path:"userRef",select:{'userPassword':0,"cardList":0}}).then(prods=>{
                 res.send(prods)
             }).catch((e)=>{res.send('server side err '+e)})         
 })
@@ -63,11 +63,14 @@ r.get("/get/prods/:id",userroute.isAuthenticated,async(req,res)=>{
 r.delete("/delete/prod/:id",userroute.isAuthenticated,async(req,res)=>{
     const token = req.headers.authorization;
   const decodedToken=  jwt.decode(token)
-  const prodUserId =prodModel.findOne(req.params.id).populate({path:"userref"})
-  if (prodUserId.userref._id==decodedToken.userId) {
+  const prodUserId =await prodModel.findById(req.params.id)
+  console.log(prodUserId.prodName)
+  if (prodUserId.userRef._id==decodedToken.userId) {
     const prod=await prodModel.findOneAndDelete(req.params.id)
             const user = await userModel.findByIdAndUpdate(decodedToken.userId, { $pull: { products: req.params.id } }, { new: true });
             const cate = await category.findByIdAndUpdate(prod.category, { $pull: { products: req.params.id } }, { new: true });
+            // user.save();
+            // cate.save();
             return res.json({msg:"item deleted success"})
           }else{
 return res.send("cant delete it")
